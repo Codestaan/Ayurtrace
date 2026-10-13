@@ -1,0 +1,30 @@
+:root { --green:#2e6b3a; --leaf:#e8f3ea; --ink:#1d2a20; --muted:#5d6b61; --warn:#b3261e; --card:#fff; --bg:#f6faf6; }
+* { box-sizing: border-box; }
+body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background:var(--bg); color:var(--ink); line-height:1.5; }
+header { background:var(--green); color:#fff; padding:14px 20px; display:flex; gap:18px; align-items:center; flex-wrap:wrap; }
+header h1 { margin:0; font-size:1.2rem; }
+header a { color:#e8f3ea; text-decoration:none; font-weight:500; }
+header a:hover { text-decoration:underline; }
+main { max-width:860px; margin:24px auto; padding:0 16px; }
+.card { background:var(--card); border-radius:12px; padding:18px 20px; margin-bottom:18px; box-shadow:0 1px 4px rgba(0,0,0,.08); }
+h2 { margin-top:0; font-size:1.15rem; }
+label { display:block; margin:10px 0 4px; font-size:.9rem; color:var(--muted); }
+input, select, textarea { width:100%; padding:9px 10px; border:1px solid #c5d3c8; border-radius:8px; font:inherit; }
+button { background:var(--green); color:#fff; border:0; padding:10px 18px; border-radius:8px; font:inherit; cursor:pointer; margin-top:12px; }
+button:hover { filter:brightness(1.1); }
+button.secondary { background:#fff; color:var(--green); border:1px solid var(--green); }
+.badge { display:inline-block; padding:3px 10px; border-radius:999px; font-size:.8rem; margin-right:6px; background:var(--leaf); color:var(--green); }
+.badge.bad { background:#fdecea; color:var(--warn); }
+.timeline { list-style:none; padding:0; margin:0; border-left:3px solid var(--leaf); }
+.timeline li { position:relative; padding:0 0 18px 22px; }
+.timeline li::before { content:""; position:absolute; left:-9px; top:4px; width:15px; height:15px; border-radius:50%; background:var(--green); }
+.timeline .when { color:var(--muted); font-size:.85rem; }
+.progress { display:flex; gap:4px; margin:10px 0; }
+.progress div { flex:1; height:8px; border-radius:4px; background:#d9e4dc; }
+.progress div.done { background:var(--green); }
+.msg { padding:10px 12px; border-radius:8px; margin-top:12px; font-size:.9rem; word-break:break-word; }
+.msg.ok { background:var(--leaf); color:var(--green); }
+.msg.err { background:#fdecea; color:var(--warn); }
+.row { display:flex; gap:12px; flex-wrap:wrap; } .row > * { flex:1; min-width:200px; }
+.muted { color:var(--muted); font-size:.9rem; }
+#qr { margin-top:10px; }

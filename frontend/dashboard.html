@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Partner dashboard – AyurTrace</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.2/dist/ethers.umd.min.js"></script>
+</head>
+<body>
+<header><h1>🌿 AyurTrace</h1><a href="index.html">Home</a><a href="verify.html">Verify a product</a><a href="dashboard.html">Partner dashboard</a></header>
+<main>
+  <div class="card">
+    <h2>Partner dashboard</h2>
+    <p class="muted">Connect the wallet that the admin registered for your role.</p>
+    <button id="connect">Connect MetaMask</button>
+    <div id="who" style="margin-top:10px"></div>
+  </div>
+
+  <div class="card" id="ipfsCard" style="display:none">
+    <h2>Evidence upload (optional)</h2>
+    <p class="muted">Paste a Pinata JWT to upload photos/reports to IPFS from the forms below. It is kept only in this browser. Use a limited, test-only key. Or skip this and paste an existing IPFS CID in the evidence field.</p>
+    <input id="jwt" type="password" placeholder="Pinata JWT (optional)">
+  </div>
+
+  <div id="forms"></div>
+  <div id="status"></div>
+</main>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+let C, ME;
+const forms = document.getElementById("forms");
+const statusBox = document.getElementById("status");
+const jwtInput = document.getElementById("jwt");
+jwtInput.value = localStorage.getItem("ayur_jwt") || "";
+jwtInput.onchange = () => localStorage.setItem("ayur_jwt", jwtInput.value);
+
+function show(msg, ok = true) {
+  statusBox.innerHTML = `<div class="msg ${ok ? "ok" : "err"}">${esc(msg)}</div>`;
+}
+
+/** Return CID: uploads the chosen file if present, else the typed hash. */
+async function evidence(prefix) {
+  const file = document.getElementById(prefix + "-file")?.files[0];
+  if (file) {
+    if (!jwtInput.value) throw new Error("Add a Pinata JWT above to upload files, or paste a CID instead.");
+    show("Uploading to IPFS…");
+    return await uploadToPinata(file, jwtInput.value);
+  }
+  return document.getElementById(prefix + "-hash").value.trim();
+}
+
+const val = (id) => document.getElementById(id).value.trim();
+
+function evidenceFields(p) {
+  return `<label>Evidence photo / report (file)</label><input type="file" id="${p}-file">
+          <label>…or existing IPFS CID</label><input id="${p}-hash" placeholder="Qm…">`;
+}
+
+async function run(label, fn) {
+  try {
+    show(label + " – confirm in MetaMask…");
+    const tx = await fn();
+    show("Transaction sent, waiting for confirmation…");
+    const rc = await tx.wait();
+    show(label + " ✔ confirmed in block " + rc.blockNumber);
+  } catch (e) {
+    show(niceError(e), false);
+  }
+}
+
+const FORMS = {
+  admin: () => `
+    <div class="card"><h2>Admin: register a partner</h2>
+      <label>Wallet address</label><input id="g-addr" placeholder="0x…">
+      <label>Role</label><select id="g-role">${ROLES.map((r, i) => `<option value="${i}">${r}${i === 0 ? " (revoke)" : ""}</option>`).join("")}</select>
+      <button id="g-btn">Grant role</button></div>
+    <div class="card"><h2>Admin: recall a batch</h2>
+      <label>Batch ID</label><input id="r-id" type="number" min="1">
+      <label>Reason</label><input id="r-reason">
+      <button id="r-btn" class="secondary">Recall batch</button></div>`,
+  farmer: () => `
+    <div class="card"><h2>Farmer: register a harvest</h2>
+      <div class="row"><div><label>Herb name</label><input id="f-name" placeholder="Ashwagandha"></div>
+      <div><label>Botanical name</label><input id="f-bot" placeholder="Withania somnifera"></div></div>
+      <label>Farm location</label><input id="f-loc" placeholder="Village, district (or lat,long)">
+      <label><input type="checkbox" id="f-org" style="width:auto"> Organic certified</label>
+      ${evidenceFields("f")}
+      <button id="f-btn">Create batch</button></div>`,
+  lab: () => `
+    <div class="card"><h2>Lab: record test result</h2>
+      <label>Batch ID</label><input id="l-id" type="number" min="1">
+      <label>Result</label><select id="l-pass"><option value="true">Passed</option><option value="false">Failed</option></select>
+      <label>Lab location</label><input id="l-loc">
+      <label>Notes (e.g. heavy metals, pesticide residue)</label><input id="l-note">
+      ${evidenceFields("l")}
+      <button id="l-btn">Record test</button></div>`,
+};
+["processor", "distributor", "retailer"].forEach((r) => {
+  const p = r[0] + "x"; // unique prefix: px, dx, rx
+  FORMS[r] = () => `
+    <div class="card"><h2>${r[0].toUpperCase() + r.slice(1)}: record your step</h2>
+      <label>Batch ID</label><input id="${p}-id" type="number" min="1">
+      <label>Location</label><input id="${p}-loc">
+      <label>Notes</label><input id="${p}-note">
+      ${evidenceFields(p)}
+      <button id="${p}-btn">Record step</button></div>`;
+});
+
+function wire(role) {
+  const $ = (id) => document.getElementById(id);
+  if (role === "admin") {
+    $("g-btn").onclick = () => run("Grant role", () => C.grantRole(val("g-addr"), Number(val("g-role"))));
+    $("r-btn").onclick = () => run("Recall", () => C.recallBatch(val("r-id"), val("r-reason")));
+  }
+  if (role === "farmer") {
+    $("f-btn").onclick = () => run("Create batch", async () =>
+      C.createBatch(val("f-name"), val("f-bot"), $("f-org").checked, val("f-loc"), await evidence("f")));
+  }
+  if (role === "lab") {
+    $("l-btn").onclick = () => run("Record lab test", async () =>
+      C.recordLabTest(val("l-id"), val("l-pass") === "true", val("l-loc"), await evidence("l"), val("l-note")));
+  }
+  const fnMap = { processor: ["px", "recordProcessing"], distributor: ["dx", "recordDistribution"], retailer: ["rx", "recordRetail"] };
+  if (fnMap[role]) {
+    const [p, fn] = fnMap[role];
+    $(p + "-btn").onclick = () => run("Record step", async () =>
+      C[fn](val(p + "-id"), val(p + "-loc"), await evidence(p), val(p + "-note")));
+  }
+}
+
+document.getElementById("connect").onclick = async () => {
+  try {
+    ({ contract: C, address: ME } = await walletContract());
+    const [adminAddr, roleNum] = await Promise.all([C.admin(), C.roles(ME)]);
+    const isAdmin = adminAddr.toLowerCase() === ME.toLowerCase();
+    const role = ROLES[Number(roleNum)];
+    document.getElementById("who").innerHTML =
+      `Connected: <code>${esc(shortAddr(ME))}</code> · role: <span class="badge">${isAdmin ? "Admin" : esc(role)}</span>`;
+
+    const active = [];
+    if (isAdmin) active.push("admin");
+    if (Number(roleNum) > 0) active.push(role.toLowerCase());
+    if (!active.length) {
+      forms.innerHTML = '<div class="card"><div class="msg err">This wallet has no role yet. Ask the admin to register it.</div></div>';
+      return;
+    }
+    document.getElementById("ipfsCard").style.display = "block";
+    forms.innerHTML = active.map((r) => FORMS[r]()).join("");
+    active.forEach(wire);
+    statusBox.innerHTML = "";
+  } catch (e) {
+    show(niceError(e), false);
+  }
+};
+</script>
+</body>
+</html>

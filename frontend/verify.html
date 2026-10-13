@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Verify batch – AyurTrace</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.2/dist/ethers.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+<header><h1>🌿 AyurTrace</h1><a href="index.html">Home</a><a href="verify.html">Verify a product</a><a href="dashboard.html">Partner dashboard</a></header>
+<main>
+  <div class="card">
+    <h2>Verify a batch</h2>
+    <div class="row">
+      <input id="batchId" type="number" min="1" placeholder="Batch number">
+      <button id="go" style="margin-top:0">Verify</button>
+    </div>
+  </div>
+  <div id="result"></div>
+</main>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+const result = document.getElementById("result");
+const input = document.getElementById("batchId");
+
+async function verify(id) {
+  result.innerHTML = '<div class="card muted">Reading the blockchain…</div>';
+  try {
+    const c = readContract();
+    const b = await c.getBatch(id);
+    const h = await c.getHistory(id);
+    const stage = Number(b.currentStage);
+
+    const badges = [
+      b.labPassed ? '<span class="badge">✅ Lab verified</span>' : '<span class="badge bad">⚠️ Lab test not passed</span>',
+      b.organicCertified ? '<span class="badge">🌿 Organic certified</span>' : "",
+      b.recalled ? '<span class="badge bad">⛔ RECALLED – do not use</span>' : "",
+    ].join("");
+
+    const progress = STAGES.map((_, i) => `<div class="${i <= stage ? "done" : ""}"></div>`).join("");
+
+    const steps = h.map((s) => `
+      <li>
+        <strong>${STAGE_ICONS[Number(s.stage)]} ${STAGES[Number(s.stage)]}</strong>
+        <div class="when">${new Date(Number(s.timestamp) * 1000).toLocaleString()} · signed by ${esc(shortAddr(s.actor))}</div>
+        <div>📍 ${esc(s.location)}</div>
+        ${s.note ? `<div>${esc(s.note)}</div>` : ""}
+        ${ipfsLink(s.evidenceHash)}
+      </li>`).join("");
+
+    const url = location.origin + location.pathname + "?id=" + id;
+    result.innerHTML = `
+      <div class="card">
+        <h2>${esc(b.herbName)} <span class="muted">(${esc(b.botanicalName)})</span></h2>
+        <div>Batch #${b.id} · farmer ${esc(shortAddr(b.farmer))}</div>
+        <p>${badges}</p>
+        <div class="progress">${progress}</div>
+        <div class="muted">Current stage: ${STAGES[stage]}</div>
+      </div>
+      <div class="card"><h2>Journey</h2><ul class="timeline">${steps}</ul></div>
+      <div class="card"><h2>QR code for this batch</h2>
+        <div id="qr"></div><div class="muted" style="margin-top:8px">Print this on the pack so customers can scan it.</div>
+      </div>`;
+    new QRCode(document.getElementById("qr"), { text: url, width: 160, height: 160 });
+  } catch (e) {
+    const msg = niceError(e);
+    result.innerHTML = `<div class="card"><div class="msg err">${esc(
+      msg.includes("No such batch") ? "No batch found with that number." : "Could not read the blockchain: " + msg
+    )}</div></div>`;
+  }
+}
+
+document.getElementById("go").onclick = () => input.value && verify(input.value);
+const q = new URLSearchParams(location.search).get("id");
+if (q) { input.value = q; verify(q); }
+</script>
+</body>
+</html>

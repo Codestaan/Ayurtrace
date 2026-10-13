@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AyurTrace – Farm to Customer Ayurveda Traceability</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header><h1>🌿 AyurTrace</h1><a href="index.html">Home</a><a href="verify.html">Verify a product</a><a href="dashboard.html">Partner dashboard</a></header>
+<main>
+  <div class="card">
+    <h2>Know where your herbs come from</h2>
+    <p>AyurTrace records every step of an Ayurvedic raw material's journey — from the farmer's field to the shop shelf — on a blockchain. Nobody can quietly edit the history, so you can check a product's origin, lab test and handling before you trust it.</p>
+    <form action="verify.html" method="get">
+      <label for="id">Enter the batch number printed on the pack (or scan its QR code)</label>
+      <input id="id" name="id" type="number" min="1" placeholder="e.g. 1" required>
+      <button type="submit">Verify batch</button>
+    </form>
+  </div>
+  <div class="card">
+    <h2>The journey</h2>
+    <p>🌱 Farmer harvests → 🔬 Lab tests purity → ⚙️ Processor dries/grinds → 🚚 Distributor transports → 🏪 Retailer sells</p>
+    <p class="muted">Farmers, labs, processors, distributors and retailers are registered by an admin and sign each step with their own wallet.</p>
+  </div>
+</main>
+</body>
+</html>
